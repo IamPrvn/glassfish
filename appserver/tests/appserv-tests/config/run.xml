@@ -247,7 +247,7 @@
 <if>
     <istrue value="${coverage.code}" />
     <then>
-         <jacoco:agent property="jacocojvmarg" destfile="${jacoco.ft.execution.data.file}" classdumpdir="${basedir}/target/jacoco-classes/"
+         <jacoco:agent property="jacocojvmarg" destfile="${jacoco.ft.execution.data.file}"
                       xmlns:jacoco="antlib:org.jacoco.ant"/>
          <copy todir="${env.S1AS_HOME}/domains/domain1/lib/ext/" >
             <fileset dir="${org.jacoco:org.jacoco.ant:jar}/../" includes="**/*.jar"/>
