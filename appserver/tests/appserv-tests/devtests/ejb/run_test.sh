@@ -164,7 +164,7 @@ test_run_ejb_web(){
 	jvm.maxpermsize=192m
 	appserver.instance.dir=\${admin.domain.dir}/\${admin.domain}" > config.properties
 
-	(jps |grep Main |cut -f1 -d" " | xargs kill -9  > /dev/null 2>&1) || true
+	#(jps |grep Main |cut -f1 -d" " | xargs kill -9  > /dev/null 2>&1) || true
 
 	cd $S1AS_HOME/domains/domain1/config/
 	sed "s/1527/${DB_PORT}/g" domain.xml > domain.xml.replaced

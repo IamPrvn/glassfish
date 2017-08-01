@@ -202,7 +202,7 @@
 
 </target>
 
-<target name="jacoco-prerequisite" >
+<target name="jacoco-prerequisite" depends="is-jacoco-enabled" if="jacoco.enabled">
     <get src="http://central.maven.org/maven2/org/apache/maven/maven-ant-tasks/2.1.3/maven-ant-tasks-2.1.3.jar"
      dest="/tmp/maven-ant-tasks-2.1.3.jar"
      usetimestamp="true" />
@@ -218,6 +218,7 @@
     <artifact:dependencies pathId="dependency.classpath" xmlns:artifact="antlib:org.apache.maven.artifact.ant">
         <dependency groupId="org.jacoco" artifactId="org.jacoco.ant" version="0.7.9" scope="test"/>
         <dependency groupId="ant-contrib" artifactId="ant-contrib" version="1.0b3" scope="test" />
+        <!--dependency groupId="org.jacoco" artifactId="org.jacoco.agent" version="0.7.9" scope="test"/-->
     </artifact:dependencies>
 
     <!-- include jacoco-jar in classpath -->
@@ -230,12 +231,14 @@
     </taskdef>
 </target>
 
-<target name="get-jacoco-jvm-arg" depends="jacoco-prerequisite">
+<target name="get-jacoco-jvm-arg" depends="jacoco-prerequisite,is-jacoco-enabled" if="jacoco.enabled">
 <if>
     <istrue value="${coverage.code}" />
     <then>
-        <jacoco:agent property="jacocojvmarg" destfile="${jacoco.ft.execution.data.file}" classdumpdir="${basedir}/target/jacoco-classes/"
-                  xmlns:jacoco="antlib:org.jacoco.ant"/>
+        <property name="jacocojvmarg" value="-Djacoco-agent.destfile=${jacoco.ft.execution.data.file}" />
+        <copy todir="${env.S1AS_HOME}/domains/domain1/lib/ext/" >
+        <fileset dir="${org.jacoco:org.jacoco.agent:jar}/../" includes="**/*.jar"/>
+        </copy>
     </then>
     <else>
         <property name="jacocojvmarg" value=" "/>
@@ -243,14 +246,35 @@
 </if>
 </target>
 
-<target name="attach-jacoco-agent" depends="jacoco-prerequisite">
+<target name="jacoco-instrument" depends="jacoco-prerequisite,is-jacoco-enabled" if="jacoco.enabled">
+    <pathconvert property="classpathProp" refid="dependency.classpath"/>
+    <echo>Classpath is ${classpathProp}</echo>
+    <property name="original.jar.dir" value="${env.S1AS_HOME}/modules" />
+    <echo>[JACOCO] : Start to instrument the JAR files under ${original.jar.dir}/.</echo>
+    <!--copy todir="${env.S1AS_HOME}/domains/domain1/lib/ext/" >
+            <fileset dir="${org.jacoco:org.jacoco.ant:jar}/../" includes="**/*.jar"/>
+    </copy-->
+    <!--The temporary directory contains instrumented classes, and the jar files-->
+    <property name="instrumented.dir" value="${basedir}/.instrumented" />
+    <mkdir dir="${instrumented.dir}" />
+    <jacoco:instrument destdir="${instrumented.dir}" xmlns:jacoco="antlib:org.jacoco.ant">
+        <fileset dir="${original.jar.dir}" includes="**/*.class" />
+
+    </jacoco:instrument>
+    <!-- copy instrumented jars to glassfish server's classpath to overwite the old ones-->
+    <copy todir="${original.jar.dir}" overwrite="true">
+    <fileset dir="${instrumented.dir}"/>
+    </copy>
+    <echo>[JACOCO] : The JAR files under ${original.jar.dir}/ have been instrumented.</echo>
+</target>
+
+<target name="attach-jacoco-agent" depends="jacoco-prerequisite,is-jacoco-enabled" if="jacoco.enabled">
 <if>
     <istrue value="${coverage.code}" />
     <then>
-         <jacoco:agent property="jacocojvmarg" destfile="${jacoco.ft.execution.data.file}" classdumpdir="${basedir}/target/jacoco-classes/"
-                      xmlns:jacoco="antlib:org.jacoco.ant"/>
-         <copy todir="${env.S1AS_HOME}/domains/domain1/lib/ext/" >
-            <fileset dir="${org.jacoco:org.jacoco.ant:jar}/../" includes="**/*.jar"/>
+         <property name="jacocojvmarg" value="-Djacoco-agent.destfile=${jacoco.ft.execution.data.file}" />
+         <copy todir="${env.S1AS_HOME}/lib" >
+            <fileset dir="${org.jacoco:org.jacoco.agent:jar}/../" includes="**/*.jar"/>
          </copy>
          <copy file="${env.S1AS_HOME}/domains/domain1/config/domain.xml"
               tofile="${env.S1AS_HOME}/domains/domain1/config/domain.bak"
